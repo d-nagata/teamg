@@ -7,8 +7,11 @@ import posenet
 
 #ここから自分でいじったパート
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+"""
+(注意)
+現段階では急を要するのでwebcam_demo.pyに全てを纏めて書いていますが、
+リファクタリングする必要があります。
+"""
 
 
 parser = argparse.ArgumentParser()
@@ -20,7 +23,10 @@ parser.add_argument('--scale_factor', type=float, default=0.7125)
 parser.add_argument('--file', type=str, default=None, help="Optionally use a video file instead of a live camera")
 args = parser.parse_args()
 
-
+"""
+実際に動画を読み込み座標を特定、画像にオーバーライトする関数
+mainとなっているのにmain関数ではないので、命名も変える必要あり
+"""
 def main():
     try:
         with tf.Session() as sess:
@@ -33,6 +39,11 @@ def main():
                 cap = cv2.VideoCapture(args.cam_id)
             cap.set(3, args.cam_width)
             cap.set(4, args.cam_height)
+
+            #動画の長さ
+            video_frame = cap.get(cv2.CAP_PROP_FRAME_COUNT) # フレーム数を取得する
+            video_fps = cap.get(cv2.CAP_PROP_FPS)           # FPS を取得する
+            video_len_sec = video_frame / video_fps                     # 長さ（秒）を計算する
 
             start = time.time()
             frame_count = 0
@@ -68,11 +79,16 @@ def main():
                 keypoint_coords *= output_scale
                 
                 #手首表示
-                '''rtwrt[1]がx座標','rtwrt[0]がy座標になってます(逆じゃないです。本当にこの順番です)。
+                '''
+                rtwrt[1]がx座標,rtwrt[0]がy座標になってます。
+                [0,10,:]の”0”が一人目という意味で”10”というのが右手首(rightWrist)という意味です。
+                全部で17か所あって,配列の0～16にはそれぞれ
 
-    [0,10,:]の”0”が一人目という意味で','”10”というのが右手首(rightWrist)という意味です。
-
-    全部で17か所あって','配列の0～16にはそれぞれnose','leftEye','rightEye','leftEar','rightEar','leftShoulder','rightShoulder','leftElbow','rightElbow','leftWrist','rightWrist','leftHip','rightHip','leftKnee','rightKnee','leftAnkle','rightAnkleとなってます(意味は大体わかりますよね？)。
+                nose','leftEye','rightEye','leftEar','rightEar','leftShoulder',
+                'rightShoulder','leftElbow','rightElbow','leftWrist','rightWrist',
+                'leftHip','rightHip','leftKnee','rightKnee','leftAnkle','rightAnkle'
+                
+                となってます。
 
                 '''
                 datalist_x.append(keypoint_coords[0,:,1])
@@ -94,35 +110,30 @@ def main():
         #OSError: webcam failureが出るので、対策
         print('Average FPS: ', frame_count / (time.time() - start))
 
-    return datalist_x,datalist_y
+    return datalist_x,datalist_y,video_len_sec
 
-def convert_score(datalist_x,datalist_y):
+
+"""
+とりあえずcsv保存,グラフ描画
+"""
+def save_as_csv(datalist_x,datalist_y,video_len_sec):
+    #動画の長さも無理やり保存
     x_df = pd.DataFrame(datalist_x,columns=['nose','leftEye','rightEye','leftEar','rightEar','leftShoulder','rightShoulder','leftElbow','rightElbow','leftWrist','rightWrist','leftHip','rightHip','leftKnee','rightKnee','leftAnkle','rightAnkle'])
-    x_diff_df = x_df.diff().iloc[1:,:]
+    x_df['length'] = 0
+    x_df.iloc[0,len(x_df.columns)-1] = [video_len_sec]
     y_df = pd.DataFrame(datalist_y,columns=['nose','leftEye','rightEye','leftEar','rightEar','leftShoulder','rightShoulder','leftElbow','rightElbow','leftWrist','rightWrist','leftHip','rightHip','leftKnee','rightKnee','leftAnkle','rightAnkle'])
-    y_diff_df = y_df.diff().iloc[1:,:]
-    print(x_diff_df)
+    y_df['length'] = 0
+    y_df.iloc[0,len(y_df.columns)-1] = [video_len_sec]
+
 
     #とりあえず保存しておく
-    x_df.to_csv('../../images/x_df.csv')
-    y_df.to_csv('../../images/y_df.csv')
+    filename = args.file
+    filename = filename.split('.')[0]
+    x_df.to_csv(f'../../images/{filename}_x_df.csv')
+    y_df.to_csv(f'../../images/{filename}_y_df.csv')
 
-    fig  = plt.figure(figsize=(24,9))
-
-    #x
-    ax_x = fig.add_subplot(1,2,1)
-    for i in range(x_diff_df.shape[1]):
-        ax_x.plot(x_diff_df.iloc[:,i])
-    #ax_x.legend(['nose','leftEye','rightEye','leftEar','rightEar','leftShoulder','rightShoulder','leftElbow','rightElbow','leftWrist','rightWrist','leftHip','rightHip','leftKnee','rightKnee','leftAnkle','rightAnkle'])
-
-    #y
-    ax_y = fig.add_subplot(1,2,2)
-    for i in range(y_diff_df.shape[1]):
-        ax_y.plot(y_diff_df.iloc[:,i])
-    #ax_y.legend(['nose','leftEye','rightEye','leftEar','rightEar','leftShoulder','rightShoulder','leftElbow','rightElbow','leftWrist','rightWrist','leftHip','rightHip','leftKnee','rightKnee','leftAnkle','rightAnkle'])
-    plt.show()
 
 if __name__ == "__main__":
-    datalist_x,datalist_y = main()
-    convert_score(datalist_x,datalist_y)
+    datalist_x,datalist_y,video_len_sec = main()
+    save_as_csv(datalist_x,datalist_y,video_len_sec)
     
