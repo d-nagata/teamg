@@ -28,11 +28,7 @@ modules.draw_graph(squat1_y_df)
 modules.draw_graph(squat2_y_df)
 
 
-
-
-
-
-
-horizontal_stability(squat1_x_df)
-horizontal_stability(squat2_x_df)
-down_depth(squat1_y_df)
+#安定度、深さを出す関数
+modules.horizontal_stability(squat1_x_df)
+modules.horizontal_stability(squat2_x_df)
+modules.down_depth(squat1_y_df)

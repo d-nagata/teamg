@@ -22,7 +22,8 @@ def replace_second(df):
 def standarizatioin_df(df):
     """
     身長を1として標準化する
-    身長は鼻と(右)くるぶしまでの距離が一番大きかったものとする
+    身長は鼻とくるぶしまでの距離が一番大きかったものとする
+    横幅に関しても同様
 
     Args:
         df (pd.DataFrame): データフレーム
@@ -30,9 +31,12 @@ def standarizatioin_df(df):
     Returns:
         (pd.DataFrame): データフレーム
     """
-    #身長: 鼻と(右)くるぶしまでの距離が一番大きかったものを身長とする
-    height_series = df.iloc[:,16]-df.iloc[:,0]
-    height = height_series.max()
+    #身長: 鼻とくるぶしまでの距離が一番大きかったものを身長とする
+    height_series_right = df.iloc[:,16]-df.iloc[:,0]
+    height_series_left = df.iloc[:,15]-df.iloc[:,0]
+    height_right = height_series_right.max()
+    height_left = height_series_left.max()
+    height = (height_right+height_left)/2
 
 
     for rep in range(17):
@@ -167,9 +171,11 @@ def high_pass_filter(df):
 def cos_sim(v1, v2):
     """
     コサイン類似度を出す
-    """
-    return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
 
+    Returns:
+        ndarray : コサイン類似度
+    """    
+    return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
 
 
 """
@@ -193,9 +199,12 @@ def cos_sim(v1, v2):
 def horizontal_stability(df):
     """
     安定度
-    -> 横ブレの検知(比較先の動画のみにおいて、体幹に関するジャッジ)
-
+    横ブレの検知をする。
+    平均二乗誤差を出す
     比較元の安定度の1.0倍以下なら「とても良い」1.5倍以下なら「少しブレる」1.5倍以上なら「安定性が無い」
+
+    Returns:
+        float : 9箇所の平均二乗誤差
     """
 
     #ブレ (0~6,11~12: 頭、目、耳、肩、腰)
@@ -207,7 +216,11 @@ def horizontal_stability(df):
 def down_depth(df):
     """
     ・深さ
-    -> 身長に対してどれだけ沈んだか    
+    身長に対してどれだけ沈んだか
+    腰の高さの最大値と最小値の差を出す
+
+    Returns:
+        float : 腰の高さの最大値と最小値の差
     """
 
     #深さ: 腰の高さの最大値と最小値の差
