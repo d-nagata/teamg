@@ -28,87 +28,83 @@ args = parser.parse_args()
 mainとなっているのにmain関数ではないので、命名も変える必要あり
 """
 def main():
-    try:
-        with tf.Session() as sess:
-            model_cfg, model_outputs = posenet.load_model(args.model, sess)
-            output_stride = model_cfg['output_stride']
+    #try:
+    with tf.Session() as sess:
+        model_cfg, model_outputs = posenet.load_model(args.model, sess)
+        output_stride = model_cfg['output_stride']
 
-            if args.file is not None:
-                cap = cv2.VideoCapture(args.file)
-            else:
-                cap = cv2.VideoCapture(args.cam_id)
-            cap.set(3, args.cam_width)
-            cap.set(4, args.cam_height)
+        if args.file is not None:
+            cap = cv2.VideoCapture(args.file)
+        else:
+            cap = cv2.VideoCapture(args.cam_id)
+        cap.set(3, args.cam_width)
+        cap.set(4, args.cam_height)
 
-            #動画の長さ
-            video_frame = cap.get(cv2.CAP_PROP_FRAME_COUNT) # フレーム数を取得する
-            video_fps = cap.get(cv2.CAP_PROP_FPS)           # FPS を取得する
-            video_len_sec = video_frame / video_fps                     # 長さ（秒）を計算する
+        #動画の長さ
+        video_frame = cap.get(cv2.CAP_PROP_FRAME_COUNT) # フレーム数を取得する
+        video_fps = cap.get(cv2.CAP_PROP_FPS)           # FPS を取得する
+        video_len_sec = video_frame / video_fps                     # 長さ（秒）を計算する
 
-            start = time.time()
-            frame_count = 0
-            #インクリメント用
-            cnt = 0
-            #ファイルをxy軸で追加
-            datalist_x = []
-            datalist_y = []
-            while True:
-                #インクリメントして途中で中断
-                cnt+= 1
-                if cnt >20:
-                    pass
-                    #break
+        start = time.time()
+        frame_count = 0
 
-                input_image, display_image, output_scale = posenet.read_cap(
-                    cap, scale_factor=args.scale_factor, output_stride=output_stride)
+        #ファイルをxy軸で追加
+        datalist_x = []
+        datalist_y = []
+        while True:
 
-                heatmaps_result, offsets_result, displacement_fwd_result, displacement_bwd_result = sess.run(
-                    model_outputs,
-                    feed_dict={'image:0': input_image}
-                )
+            input_image, display_image, output_scale = posenet.read_cap(
+                cap, scale_factor=args.scale_factor, output_stride=output_stride)
 
-                pose_scores, keypoint_scores, keypoint_coords = posenet.decode_multi.decode_multiple_poses(
-                    heatmaps_result.squeeze(axis=0),
-                    offsets_result.squeeze(axis=0),
-                    displacement_fwd_result.squeeze(axis=0),
-                    displacement_bwd_result.squeeze(axis=0),
-                    output_stride=output_stride,
-                    max_pose_detections=10,
-                    min_pose_score=0.15)
+            heatmaps_result, offsets_result, displacement_fwd_result, displacement_bwd_result = sess.run(
+                model_outputs,
+                feed_dict={'image:0': input_image}
+            )
 
-                keypoint_coords *= output_scale
-                
-                #手首表示
-                '''
-                rtwrt[1]がx座標,rtwrt[0]がy座標になってます。
-                [0,10,:]の”0”が一人目という意味で”10”というのが右手首(rightWrist)という意味です。
-                全部で17か所あって,配列の0～16にはそれぞれ
+            pose_scores, keypoint_scores, keypoint_coords = posenet.decode_multi.decode_multiple_poses(
+                heatmaps_result.squeeze(axis=0),
+                offsets_result.squeeze(axis=0),
+                displacement_fwd_result.squeeze(axis=0),
+                displacement_bwd_result.squeeze(axis=0),
+                output_stride=output_stride,
+                max_pose_detections=10,
+                min_pose_score=0.15)
 
-                nose','leftEye','rightEye','leftEar','rightEar','leftShoulder',
-                'rightShoulder','leftElbow','rightElbow','leftWrist','rightWrist',
-                'leftHip','rightHip','leftKnee','rightKnee','leftAnkle','rightAnkle'
-                
-                となってます。
+            keypoint_coords *= output_scale
+            
+            #手首表示
+            '''
+            rtwrt[1]がx座標,rtwrt[0]がy座標になってます。
+            [0,10,:]の”0”が一人目という意味で”10”というのが右手首(rightWrist)という意味です。
+            全部で17か所あって,配列の0～16にはそれぞれ
 
-                '''
-                datalist_x.append(keypoint_coords[0,:,1])
-                datalist_y.append(keypoint_coords[0,:,0])
+            nose','leftEye','rightEye','leftEar','rightEar','leftShoulder',
+            'rightShoulder','leftElbow','rightElbow','leftWrist','rightWrist',
+            'leftHip','rightHip','leftKnee','rightKnee','leftAnkle','rightAnkle'
+            
+            となってます。
 
-                # TODO this isn't particularly fast, use GL for drawing and display someday...
-                overlay_image = posenet.draw_skel_and_kp(
-                    display_image, pose_scores, keypoint_scores, keypoint_coords,
-                    min_pose_score=0.15, min_part_score=0.1)
+            '''
+            datalist_x.append(keypoint_coords[0,:,1])
+            datalist_y.append(keypoint_coords[0,:,0])
 
-                cv2.imshow('posenet', overlay_image)
-                frame_count += 1
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+            # TODO this isn't particularly fast, use GL for drawing and display someday...
+            overlay_image = posenet.draw_skel_and_kp(
+                display_image, pose_scores, keypoint_scores, keypoint_coords,
+                min_pose_score=0.15, min_part_score=0.1)
 
-            print('Average FPS: ', frame_count / (time.time() - start))
+            cv2.imshow('posenet', overlay_image)
+            frame_count += 1
+            if cv2.waitKey(1) and 0xFF == ord('q'):
+                break
 
+        print('Average FPS: ', frame_count / (time.time() - start))
+    
+    """
     except:
         #OSError: webcam failureが出るので、対策
         print('Average FPS: ', frame_count / (time.time() - start))
+    """
 
     return datalist_x,datalist_y,video_len_sec
 
@@ -129,8 +125,8 @@ def save_as_csv(datalist_x,datalist_y,video_len_sec):
     #とりあえず保存しておく
     filename = args.file
     filename = filename.split('.')[0]
-    x_df.to_csv(f'../../images/{filename}_x_df.csv')
-    y_df.to_csv(f'../../images/{filename}_y_df.csv')
+    x_df.to_csv(f'../images/{filename}_x_df_1214.csv')
+    y_df.to_csv(f'../images/{filename}_y_df_1214.csv')
 
 
 if __name__ == "__main__":
