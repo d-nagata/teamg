@@ -16,7 +16,11 @@ webcam_demo.pyでsquat2の読み込みが途中で終わってしまう。
 
 """
 
-if __name__ == "__main__":
+
+
+def main():
+    # movie 動画を受け取って読み込み
+
     #読み込み
     squat1_x_df = pd.read_csv(f'../images/squat1_x_df.csv',index_col=0)
     squat1_y_df = pd.read_csv(f'../images/squat1_y_df.csv',index_col=0)
@@ -32,11 +36,19 @@ if __name__ == "__main__":
 
 
     #該当のdfをグラフ化
-    modules.draw_graph(squat1_y_df)
-    modules.draw_graph(squat2_y_df)
+    #modules.draw_graph(squat1_y_df)
+    #modules.draw_graph(squat2_y_df)
 
 
     #安定度、深さを出す関数
     modules.horizontal_stability(squat1_x_df)
     modules.horizontal_stability(squat2_x_df)
-    modules.down_depth(squat1_y_df)
+    y_depth = modules.down_depth(squat1_y_df)
+
+    print(y_depth)
+
+
+    return #((x安定度,y安定度),y深さ,...)
+
+if __name__ == "__main__":
+    main()
