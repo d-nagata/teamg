@@ -183,6 +183,9 @@ def cos_sim(v1, v2):
 安定度(横へのブレ)
 深さ(しっかりしゃがんでいるか)
 負荷率(しゃがみ時のキツイ体勢を何秒維持出来ているか)
+足の幅（足の幅は適切な距離離れているか=肩幅、少し広めはおけ）
+太もも床平行（太ももが床と平行か）
+膝（膝が内側に入りすぎていないか）
 
 (秒数はタイミング合わせるの難しかったりリズム感無いと厳しいので保留)
 
@@ -194,11 +197,20 @@ def cos_sim(v1, v2):
 →角度を無視した場合(角度がつくとどれだけ深いか判定しにくい)。くるぶし:ひざ:腰の比率
 
 ・負荷率(しゃがみ時のキツイ体勢を何秒維持出来ているか?)
+
+・足の幅
+→leftankleとrightankleの最大距離(x)-leftshoulderとrightshoulderの最大距離(x)
+
+・太もも床平行（太ももが床と平行か）
+→righthipとrightkneeの最小距離(y)とlefthipとleftkneeの最小距離(y)の平均
+
+・膝
+→righthipとrightkneeの最小距離(y)の同時刻の時のleftankleとrightankleの距離(x)-righthipとrightkneeの最小距離(y)の同時刻の時のrightkneeとleftkneeの距離(x)
 """
 
 def horizontal_stability(df):
     """
-    安定度
+    ・安定度
     横ブレの検知をする。
     平均二乗誤差を出す
     比較元の安定度の1.0倍以下なら「とても良い」1.5倍以下なら「少しブレる」1.5倍以上なら「安定性が無い」
@@ -227,3 +239,52 @@ def down_depth(df):
     hip_depth = df.iloc[:,11].max() - df.iloc[:,11].min()
     
     return hip_depth
+
+def feet_width(df):
+    """
+    ・足の幅
+    leftankleとrightankleの最大距離(x)とleftshoulderとrightshoulderの最大距離(x)の差
+    
+    Returns:
+        float : leftankleとrightankleの最大距離(x)とleftshoulderとrightshoulderの最大距離(x)の差
+    """
+    
+    #leftankleとrightankleの最大距離(x)とleftshoulderとrightshoulderの最大距離(x)の差
+    arrayankle = df.iloc[15,:] - df.iloc[16,:]
+    arrayshoulder = df.iloc[5,:] - df.iloc[6,:]
+    foot_width = np.max(arrayankle) - np.max(arrayshoulder)
+    
+    return foot_width
+    
+def thigh_parallel(df):
+    """
+    ・太もも床平行
+    太ももが床と平行か
+    
+    Returns:
+        float : righthipとrightkneeの最小距離(y)とlefthipとleftkneeの最小距離(y)の平均
+    """
+    
+    #righthipとrightkneeの最小距離(y)とlefthipとleftkneeの最小距離(y)の平均
+    arrayright = df.iloc[:,12] - df.iloc[:,14]
+    arrayleft = df.iloc[:,11] - df.iloc[:,13]
+    thigh_how = np.min(arrayright) + np.min(arrayleft) / 2
+    
+    return thigh_how
+    
+def knee_angle(df):
+    """
+    ・膝
+    膝が内側に入りすぎていないか
+    
+    Returns:
+        float : righthipとrightkneeの最小距離(y)の同時刻の時のleftankleとrightankleの距離(x)-righthipとrightkneeの最小距離(y)の同時刻の時のrightkneeとleftkneeの距離(x)
+    """
+        
+    #righthipとrightkneeの最小距離(y)の同時刻の時のleftankleとrightankleの距離(x)-righthipとrightkneeの最小距離(y)の同時刻の時のrightkneeとleftkneeの距離(x)
+    arrayfeet = df.iloc[15,:] - df.iloc[16,:]
+    arrayknee = df.iloc[13,:] - df.iloc[14,:]
+    knee_how = np.min(arrayfeet) - np.min(arrayknee)
+    
+    return knee_how
+    
