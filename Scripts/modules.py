@@ -287,4 +287,29 @@ def knee_angle(df):
     knee_how = np.min(arrayfeet) - np.min(arrayknee)
     
     return knee_how
+
+"""
+100点満点での点数の出し方
+・お手本動画を100点満点にする
+安定度(横へのブレ)→大きいほどマイナス→引き算で計算
+深さ(しっかりしゃがんでいるか)→大きいほどプラス→足し算で計算
+負荷率(しゃがみ時のキツイ体勢を何秒維持出来ているか)→なし
+足の幅（足の幅は適切な距離離れているか=肩幅、少し広めはおけ）→大きいほどマイナス→引き算で計算
+太もも床平行（太ももが床と平行か）→大きいほどマイナス→引き算で計算
+膝（膝が内側に入りすぎていないか）→大きいほどマイナス→引き算で計算
+
+5点から足し算引き算で数値をだす→お手本動画の点数をだす→お手本動画の点数を100点満点に換算する→その換算方法でどのデータを入れても100点満点に換算するようにする→数値が負になってしまった場合は0点と表示する
+"""
+
+def score_total(x,y):
+    score_notin100 = 5 - horizontal_stability(x) + down_depth(y) - feet_width(x) - thigh_parallel(y) - knee_angle(x)
+    score_in100 = score_notin100 * 28
+    final_score = 0
+    if score_in100 > 100 :
+        final_score = 100.0
+    elif score_in100 < 0:
+        final_score = 0.0
+    else:
+        final_score = round(score_in100)
+    return final_score
     
